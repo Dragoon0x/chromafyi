@@ -45,12 +45,18 @@ export function LeftRail() {
       <div className="px-4 py-5 flex items-center gap-2 border-b border-[color:var(--color-border)]">
         <div
           aria-hidden="true"
-          className="w-6 h-6 rounded-[6px]"
+          className="w-6 h-6 rounded-full relative"
           style={{
             background:
-              'conic-gradient(from 0deg, oklch(0.78 0.17 30), oklch(0.78 0.17 90), oklch(0.78 0.17 150), oklch(0.78 0.17 210), oklch(0.78 0.17 270), oklch(0.78 0.17 330), oklch(0.78 0.17 30))',
+              'conic-gradient(from -90deg, oklch(0.72 0.175 0), oklch(0.72 0.175 60), oklch(0.72 0.175 120), oklch(0.72 0.175 180), oklch(0.72 0.175 240), oklch(0.72 0.175 300), oklch(0.72 0.175 360))',
+            boxShadow: 'inset 0 0 0 1px color-mix(in oklab, black 15%, transparent)',
           }}
-        />
+        >
+          <span
+            aria-hidden="true"
+            className="absolute inset-[33%] rounded-full bg-[color:var(--color-bg)]"
+          />
+        </div>
         <span className="text-sm font-medium">chroma.fyi</span>
         <span
           className="ml-auto mono text-[10px] text-[color:var(--color-text-dim)] uppercase tracking-wider"
