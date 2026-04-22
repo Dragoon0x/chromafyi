@@ -88,8 +88,10 @@ export function CommandPalette() {
           </Command.Empty>
 
           {parsed && (
-            <Command.Group heading="Parsed color">
+            <Command.Group heading="Parsed color" forceMount>
               <Item
+                forceMount
+                value={search}
                 icon={
                   <span
                     className="w-3.5 h-3.5 rounded-[3px] border border-black/20"
@@ -188,15 +190,21 @@ export function CommandPalette() {
 function Item({
   icon,
   onSelect,
+  value,
+  forceMount,
   children,
 }: {
   icon: React.ReactNode;
   onSelect: () => void;
+  value?: string;
+  forceMount?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Command.Item
       onSelect={onSelect}
+      value={value}
+      forceMount={forceMount}
       className="flex items-center gap-2.5 px-3 h-9 text-sm rounded-[var(--radius-sm)] text-[color:var(--color-text-muted)] data-[selected=true]:bg-[color:var(--color-surface-2)] data-[selected=true]:text-[color:var(--color-text)] cursor-pointer"
     >
       <span className="text-[color:var(--color-text-dim)] w-4 flex items-center justify-center">
