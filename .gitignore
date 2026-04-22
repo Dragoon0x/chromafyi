@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-ssr
+dev-dist
 .DS_Store
 *.local
 .env
@@ -13,3 +14,4 @@ coverage
 .idea
 .vscode
 *.log
+*.tsbuildinfo
