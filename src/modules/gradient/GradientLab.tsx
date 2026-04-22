@@ -2,8 +2,10 @@ import { oklchToCssString } from '@/color/convert';
 import { type InterpolationSpace, sampleGradient } from '@/color/interpolate';
 import { useStore } from '@/store';
 import { nextId } from '@/store/defaults';
+import type { OKLCH } from '@/color/types';
 import { Button } from '@/ui/Button';
 import { CopyButton } from '@/ui/CopyButton';
+import { NativeColorButton } from '@/ui/NativeColorButton';
 import { Plus, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 
@@ -30,7 +32,7 @@ export function GradientLab() {
   const removeStop = (id: string) => {
     setGradient({ stops: gradient.stops.filter((s) => s.id !== id) });
   };
-  const updateStop = (id: string, patch: Partial<{ position: number }>) => {
+  const updateStop = (id: string, patch: Partial<{ position: number; color: OKLCH }>) => {
     setGradient({
       stops: gradient.stops.map((s) => (s.id === id ? { ...s, ...patch } : s)),
     });
@@ -100,12 +102,16 @@ export function GradientLab() {
                 key={s.id}
                 className="flex items-center gap-3 h-10 px-2 border border-[color:var(--color-border)] rounded-[var(--radius-sm)]"
               >
-                <button
-                  type="button"
-                  onClick={() => pickRecent(s.color)}
-                  aria-label={`Select ${oklchToCssString(s.color)}`}
+                <NativeColorButton
+                  value={s.color}
+                  label={`Edit stop ${oklchToCssString(s.color)}`}
+                  title="Click to edit stop"
                   className="w-6 h-6 rounded-[var(--radius-xs)] border border-black/20 transition-transform hover:scale-105"
                   style={{ background: oklchToCssString(s.color) }}
+                  onChange={(next) => {
+                    updateStop(s.id, { color: next });
+                    pickRecent(next);
+                  }}
                 />
                 <span className="mono text-xs text-[color:var(--color-text)] w-44 truncate">
                   {oklchToCssString(s.color)}

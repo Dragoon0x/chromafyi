@@ -1,9 +1,11 @@
 import { apcaContrast, apcaLabel, apcaVerdict } from '@/color/apca';
 import { oklchToCssString } from '@/color/convert';
+import type { OKLCH } from '@/color/types';
 import { wcagContrast, wcagLevel } from '@/color/wcag';
 import { useStore } from '@/store';
 import { Button } from '@/ui/Button';
 import { Chip } from '@/ui/Chip';
+import { NativeColorButton } from '@/ui/NativeColorButton';
 import { Swatch } from '@/ui/Swatch';
 import { ArrowLeftRight } from 'lucide-react';
 import { useMemo } from 'react';
@@ -210,8 +212,8 @@ function PickerColumn({
   onPick,
 }: {
   label: string;
-  color: { l: number; c: number; h: number };
-  onPick: (c: { l: number; c: number; h: number }) => void;
+  color: OKLCH;
+  onPick: (c: OKLCH) => void;
 }) {
   const setColor = useStore((s) => s.setColor);
   const current = useStore((s) => s.color);
@@ -221,18 +223,32 @@ function PickerColumn({
         <span className="mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-dim)]">
           {label}
         </span>
-        <button
-          type="button"
-          onClick={() => {
-            setColor(color);
-          }}
-          className="text-[10px] mono text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] transition-colors"
-        >
-          edit in inspector
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => onPick(current)}
+            className="text-[10px] mono text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] transition-colors"
+            title="Use the Inspector's current color"
+          >
+            use current
+          </button>
+          <button
+            type="button"
+            onClick={() => setColor(color)}
+            className="text-[10px] mono text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] transition-colors"
+          >
+            edit in inspector
+          </button>
+        </div>
       </div>
       <div className="flex items-center gap-2">
-        <Swatch color={color} size={32} onClick={() => onPick(current)} />
+        <NativeColorButton
+          value={color}
+          onChange={onPick}
+          label={`Edit ${label} color`}
+          className="w-8 h-8 rounded-[var(--radius-xs)] border border-black/20 transition-transform hover:scale-105 shrink-0"
+          style={{ background: oklchToCssString(color) }}
+        />
         <span className="mono text-[11px] truncate flex-1">{oklchToCssString(color)}</span>
       </div>
     </div>

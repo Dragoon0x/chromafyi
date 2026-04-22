@@ -87,6 +87,67 @@ test.describe('color selection diagnosis', () => {
     await expect(input).toHaveValue(/oklch\(/i);
   });
 
+  test('native picker opens in Palette swatch cards', async ({ page }) => {
+    await page.goto('/');
+    // Switch to Palette
+    const rail = page.getByRole('navigation', { name: 'Modules' });
+    await rail.getByRole('button', { name: /Palette/ }).click();
+    await expect(page.getByLabel('Palette name')).toBeVisible();
+
+    // Every swatch card is a label-wrapped NativeColorButton; its input should exist
+    const swatchInputs = page.locator('input[type="color"]');
+    const count = await swatchInputs.count();
+    expect(count).toBeGreaterThan(1); // more than just Inspector + status-bar pickers
+
+    // Drive the first palette-scoped input to simulate the user picking a color
+    const firstSwatchInput = swatchInputs.nth(2); // 0=ColorPreview 1=StatusBar 2+=palette
+    await firstSwatchInput.evaluate((el) => {
+      const i = el as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      setter?.call(i, '#ff3366');
+      i.dispatchEvent(new Event('input', { bubbles: true }));
+      i.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    // Wait for re-render
+    await page.waitForTimeout(150);
+    // At least one swatch card now shows oklch near red
+    await expect(
+      page.locator('.mono', { hasText: /oklch\(0\.6\d/ }).first(),
+    ).toBeVisible();
+  });
+
+  test('native picker opens in Gradient stops', async ({ page }) => {
+    await page.goto('/');
+    const rail = page.getByRole('navigation', { name: 'Modules' });
+    await rail.getByRole('button', { name: /Gradient/ }).click();
+    await expect(page.getByRole('heading', { name: /Gradient lab/i })).toBeVisible();
+
+    // Scope to stop-row pickers (their label starts with "Edit stop"). The
+    // StatusBar picker + any Inspector previews are on other rows.
+    const stopPickers = page.locator('label[aria-label^="Edit stop"] + input[type="color"]');
+    expect(await stopPickers.count()).toBeGreaterThanOrEqual(2);
+
+    const first = stopPickers.first();
+    const before = await first.inputValue();
+    await first.evaluate((el) => {
+      const i = el as HTMLInputElement;
+      const setter = Object.getOwnPropertyDescriptor(
+        HTMLInputElement.prototype,
+        'value',
+      )?.set;
+      setter?.call(i, '#22cc44');
+      i.dispatchEvent(new Event('input', { bubbles: true }));
+      i.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await page.waitForTimeout(200);
+    const after = await first.inputValue();
+    expect(after).not.toBe(before);
+    expect(after.toLowerCase()).toMatch(/^#[0-9a-f]{6}$/);
+  });
+
   test('recent-color swatch click updates Inspector', async ({ page }) => {
     await page.goto('/');
     const input = page.locator('#color-input');

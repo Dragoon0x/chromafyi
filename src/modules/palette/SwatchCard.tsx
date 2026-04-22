@@ -3,7 +3,8 @@ import { formatPercent } from '@/color/format';
 import { useStore } from '@/store';
 import type { Swatch } from '@/store/types';
 import { CopyButton } from '@/ui/CopyButton';
-import { Lock, LockOpen, Trash2 } from 'lucide-react';
+import { NativeColorButton } from '@/ui/NativeColorButton';
+import { ArrowUpToLine, Lock, LockOpen, Trash2 } from 'lucide-react';
 
 export function SwatchCard({ swatch }: { swatch: Swatch }) {
   const update = useStore((s) => s.updateSwatch);
@@ -16,21 +17,35 @@ export function SwatchCard({ swatch }: { swatch: Swatch }) {
 
   return (
     <div className="group relative rounded-[var(--radius-md)] overflow-hidden border border-[color:var(--color-border)] bg-[color:var(--color-surface)]">
-      <button
-        type="button"
-        onClick={() => pick(swatch.color)}
-        aria-label={`Use ${css}`}
-        className="block w-full h-28 transition-transform group-hover:scale-[1.01]"
+      {/* Click the swatch body → open native color picker; changes update this swatch in place. */}
+      <NativeColorButton
+        value={swatch.color}
+        label={`Edit ${css}`}
+        title="Click to edit · native color picker"
+        className="block w-full h-28 transition-transform group-hover:scale-[1.01] focus-visible:outline-none"
         style={{ background: css, color: textColor }}
+        onChange={(next) => {
+          update(swatch.id, { color: next });
+          pick(next); // keep Inspector in sync
+        }}
       >
-        <span className="sr-only">Use this color</span>
-      </button>
+        <span className="sr-only">Edit this swatch</span>
+      </NativeColorButton>
 
       <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          type="button"
+          onClick={() => pick(swatch.color)}
+          aria-label="Send to Inspector"
+          title="Send to Inspector"
+          className="w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-xs)] bg-black/30 hover:bg-black/55 text-white transition-colors"
+        >
+          <ArrowUpToLine size={12} />
+        </button>
         <CopyButton
           value={css}
           label="Copy OKLCH"
-          className="w-6 h-6 bg-black/30 hover:bg-black/50 text-white"
+          className="w-6 h-6 bg-black/30 hover:bg-black/55 text-white"
         />
         <button
           type="button"
