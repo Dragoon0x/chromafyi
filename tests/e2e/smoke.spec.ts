@@ -10,9 +10,10 @@ test.describe('chroma.fyi smoke', () => {
 
   test('left rail navigates to Matrix and Palette', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('button', { name: 'Matrix' }).click();
+    const rail = page.getByRole('navigation', { name: 'Modules' });
+    await rail.getByRole('button', { name: /Matrix/ }).click();
     await expect(page.getByRole('heading', { name: /Tonal matrix/i })).toBeVisible();
-    await page.getByRole('button', { name: 'Palette' }).click();
+    await rail.getByRole('button', { name: /Palette/ }).click();
     await expect(page.getByLabel('Palette name')).toBeVisible();
   });
 
@@ -27,24 +28,27 @@ test.describe('chroma.fyi smoke', () => {
 
   test('URL hash round-trip preserves color', async ({ page, context }) => {
     await page.goto('/');
-    // Wait for the hash sync to settle (debounced 250ms)
+    // Change something so the hash payload is non-default
+    const input = page.locator('#color-input');
+    await input.fill('#ff3366');
+    await input.press('Enter');
+    // Wait for debounced hash write (250ms)
     await page.waitForTimeout(500);
     const url1 = page.url();
     expect(url1).toContain('#s=');
 
-    // Open a new tab with the same URL
     const page2 = await context.newPage();
     await page2.goto(url1);
     await expect(page2.getByRole('heading', { name: 'Inspector' })).toBeVisible();
-    const url2 = page2.url();
-    // The hash payload should match (or at least both carry a payload)
-    expect(url2).toContain('#s=');
+    // The restored color should not be the default oklch(0.78 0.17 200)
+    await expect(page2.locator('#color-input')).not.toHaveValue('oklch(0.78 0.17 200)');
   });
 
   test('keyboard chord "g m" jumps to Matrix', async ({ page }) => {
     await page.goto('/');
     await page.waitForSelector('h1:has-text("Inspector")');
-    await page.locator('body').click();
+    // Move focus out of any text input so the chord handler accepts keypresses
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.keyboard.press('g');
     await page.keyboard.press('m');
     await expect(page.getByRole('heading', { name: /Tonal matrix/i })).toBeVisible();

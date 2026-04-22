@@ -1,16 +1,19 @@
-import { oklchToCssString } from '@/color/convert';
+import { oklchToCssString, oklchToHex, parseInput } from '@/color/convert';
 import { widestGamut } from '@/color/gamut';
 import { useCopy } from '@/hooks/useCopy';
 import { useStore } from '@/store';
 import { getShareableUrl } from '@/store/hash';
 import { Chip } from '@/ui/Chip';
 import { Link2, Monitor, Moon, Sun } from 'lucide-react';
+import { useRef } from 'react';
 
 export function StatusBar() {
   const color = useStore((s) => s.color);
   const theme = useStore((s) => s.theme);
   const setTheme = useStore((s) => s.setTheme);
+  const pickRecent = useStore((s) => s.pickRecent);
   const { copied, copy } = useCopy(2000);
+  const pickerRef = useRef<HTMLInputElement>(null);
 
   const gamut = widestGamut(color);
   const gamutLabel =
@@ -30,10 +33,25 @@ export function StatusBar() {
       role="status"
     >
       <div className="flex items-center gap-2">
-        <span
-          className="w-3.5 h-3.5 rounded-[3px] border border-black/20"
+        <button
+          type="button"
+          onClick={() => pickerRef.current?.click()}
+          title="Open color picker"
+          aria-label="Open native color picker"
+          className="w-3.5 h-3.5 rounded-[3px] border border-black/20 cursor-pointer transition-transform hover:scale-110"
           style={{ background: oklchToCssString(color) }}
+        />
+        <input
+          ref={pickerRef}
+          type="color"
+          value={oklchToHex(color)}
+          onChange={(e) => {
+            const parsed = parseInput(e.target.value);
+            if (parsed) pickRecent(parsed);
+          }}
+          className="sr-only"
           aria-hidden="true"
+          tabIndex={-1}
         />
         <span className="mono">{oklchToCssString(color)}</span>
       </div>
