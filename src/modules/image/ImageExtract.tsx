@@ -1,18 +1,17 @@
 import { oklchToCssString } from '@/color/convert';
-import { type OKLabPoint, kmeans } from '@/color/kmeans';
 import type { OKLCH } from '@/color/types';
 import { useStore } from '@/store';
 import { nextId } from '@/store/defaults';
 import { Button } from '@/ui/Button';
 import { Swatch } from '@/ui/Swatch';
-import { converter } from 'culori';
 import { Image as ImageIcon, Upload } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-const toOklab = converter('oklab');
-const toOklch = converter('oklch');
+type WorkerResponse =
+  | { id: string; ok: true; palette: OKLCH[] }
+  | { id: string; ok: false; error: string };
 
-function extract(img: HTMLImageElement, k: number): OKLCH[] {
+function imageToRgbaBuffer(img: HTMLImageElement): Uint8ClampedArray | null {
   const sample = 220;
   const aspect = img.naturalWidth / img.naturalHeight;
   const w = aspect >= 1 ? sample : Math.round(sample * aspect);
@@ -21,25 +20,9 @@ function extract(img: HTMLImageElement, k: number): OKLCH[] {
   canvas.width = Math.max(1, w);
   canvas.height = Math.max(1, h);
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return [];
+  if (!ctx) return null;
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-  const points: OKLabPoint[] = [];
-  for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3] ?? 255;
-    if (a < 128) continue;
-    const r = (data[i] ?? 0) / 255;
-    const g = (data[i + 1] ?? 0) / 255;
-    const b = (data[i + 2] ?? 0) / 255;
-    const lab = toOklab({ mode: 'rgb', r, g, b });
-    points.push({ l: lab.l ?? 0, a: lab.a ?? 0, b: lab.b ?? 0 });
-  }
-  const centroids = kmeans(points, k, 16);
-  return centroids
-    .map((c) => toOklch({ mode: 'oklab', l: c.l, a: c.a, b: c.b }))
-    .map((o) => ({ l: o.l ?? 0, c: o.c ?? 0, h: o.h ?? 0 }))
-    .sort((a, b) => a.l - b.l);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
 }
 
 export function ImageExtract() {
@@ -47,24 +30,58 @@ export function ImageExtract() {
   const [k, setK] = useState(6);
   const [palette, setLocalPalette] = useState<OKLCH[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const setPalette = useStore((s) => s.setPalette);
+
+  const workerRef = useRef<Worker | null>(null);
+  const pendingId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const worker = new Worker(new URL('@/workers/image-extract.worker.ts', import.meta.url), {
+      type: 'module',
+    });
+    workerRef.current = worker;
+    const onMessage = (e: MessageEvent<WorkerResponse>) => {
+      if (e.data.id !== pendingId.current) return;
+      if (e.data.ok) {
+        setLocalPalette(e.data.palette);
+        setError(null);
+      } else {
+        setError(e.data.error);
+      }
+      setBusy(false);
+    };
+    worker.addEventListener('message', onMessage);
+    return () => {
+      worker.removeEventListener('message', onMessage);
+      worker.terminate();
+      workerRef.current = null;
+    };
+  }, []);
 
   const handleFile = useCallback(
     (file: File) => {
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
       setBusy(true);
+      setError(null);
       const img = new Image();
       img.onload = () => {
-        try {
-          const p = extract(img, k);
-          setLocalPalette(p);
-        } finally {
+        const buf = imageToRgbaBuffer(img);
+        if (!buf || !workerRef.current) {
           setBusy(false);
+          setError('Could not read image.');
+          return;
         }
+        const id = nextId();
+        pendingId.current = id;
+        workerRef.current.postMessage({ id, data: buf, k }, [buf.buffer]);
       };
-      img.onerror = () => setBusy(false);
+      img.onerror = () => {
+        setBusy(false);
+        setError('Failed to decode image.');
+      };
       img.src = url;
     },
     [k],
@@ -92,7 +109,7 @@ export function ImageExtract() {
           <div>
             <h1 className="text-lg font-medium">Image extract</h1>
             <p className="text-xs text-[color:var(--color-text-muted)] mt-0.5">
-              K-means clustering in OKLab — the colors the image would pick if it could.
+              K-means clustering in OKLab — runs off main thread.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -135,6 +152,15 @@ export function ImageExtract() {
             Runs locally. Your image never leaves your browser.
           </div>
         </label>
+
+        {error && (
+          <div
+            role="alert"
+            className="text-sm text-[color:var(--color-danger)] px-3 py-2 border border-[color:var(--color-danger)] rounded-[var(--radius-sm)]"
+          >
+            {error}
+          </div>
+        )}
 
         {previewUrl && (
           <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-4">

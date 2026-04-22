@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Share a palette
+    url: https://chromafyi.vercel.app
+    about: Playing with the app and want to share state? Copy the URL from the status bar — it carries everything.

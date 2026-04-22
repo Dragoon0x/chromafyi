@@ -1,11 +1,12 @@
-import { oklchToCssString } from '@/color/convert';
+import { clampOklch, normalizeHue, oklchToCssString } from '@/color/convert';
 import { formatCompactOklch } from '@/color/format';
 import { HARMONY_LABEL, type HarmonyKind, harmony } from '@/color/harmony';
 import { useStore } from '@/store';
 import { nextId } from '@/store/defaults';
 import { Button } from '@/ui/Button';
 import { CopyButton } from '@/ui/CopyButton';
-import { Plus, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
+import { Plus, Redo2, RotateCcw, Sparkles, Sun, SunDim, Undo2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { SwatchCard } from './SwatchCard';
 
@@ -26,6 +27,22 @@ export function PaletteBuilder() {
       name: `${HARMONY_LABEL[harmonyKind]} of ${formatCompactOklch(color)}`,
       swatches: hues.map((c) => ({ id: nextId(), color: c })),
       harmony: harmonyKind,
+    });
+  };
+
+  // Bulk shift ops — respect per-swatch L/C/H locks.
+  const shiftAll = (patch: { l?: number; c?: number; h?: number }) => {
+    setPalette({
+      ...palette,
+      swatches: palette.swatches.map((s) => {
+        const l = s.lockL ? s.color.l : s.color.l + (patch.l ?? 0);
+        const ch = s.lockC ? s.color.c : s.color.c + (patch.c ?? 0);
+        const h = s.lockH ? s.color.h : s.color.h + (patch.h ?? 0);
+        return {
+          ...s,
+          color: clampOklch({ l, c: ch, h: normalizeHue(h) }),
+        };
+      }),
     });
   };
 
@@ -80,6 +97,42 @@ export function PaletteBuilder() {
           </div>
         </header>
 
+        {palette.swatches.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap text-[11px] text-[color:var(--color-text-muted)]">
+            <span className="mono text-[10px] uppercase tracking-wider text-[color:var(--color-text-dim)]">
+              Shift (respects locks)
+            </span>
+            <div className="flex items-center gap-0.5">
+              <IconBtn onClick={() => shiftAll({ h: -15 })} label="Rotate hue -15°">
+                <Undo2 size={13} />
+                <span className="mono text-[10px]">H</span>
+              </IconBtn>
+              <IconBtn onClick={() => shiftAll({ h: 15 })} label="Rotate hue +15°">
+                <span className="mono text-[10px]">H</span>
+                <Redo2 size={13} />
+              </IconBtn>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <IconBtn onClick={() => shiftAll({ l: -0.04 })} label="Darken">
+                <SunDim size={13} />
+                <span className="mono text-[10px]">L−</span>
+              </IconBtn>
+              <IconBtn onClick={() => shiftAll({ l: 0.04 })} label="Lighten">
+                <Sun size={13} />
+                <span className="mono text-[10px]">L+</span>
+              </IconBtn>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <IconBtn onClick={() => shiftAll({ c: -0.02 })} label="Desaturate">
+                <span className="mono text-[10px]">C−</span>
+              </IconBtn>
+              <IconBtn onClick={() => shiftAll({ c: 0.02 })} label="Saturate">
+                <span className="mono text-[10px]">C+</span>
+              </IconBtn>
+            </div>
+          </div>
+        )}
+
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
           {palette.swatches.map((s) => (
             <SwatchCard key={s.id} swatch={s} />
@@ -121,4 +174,24 @@ function CopyIt({ value }: { value: string }) {
   );
 }
 
-export { Trash2 };
+function IconBtn({
+  onClick,
+  label,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[color:var(--color-border)] hover:border-[color:var(--color-border-strong)] hover:bg-[color:var(--color-surface-2)] transition-colors text-[color:var(--color-text-muted)] hover:text-[color:var(--color-text)]"
+    >
+      {children}
+    </button>
+  );
+}

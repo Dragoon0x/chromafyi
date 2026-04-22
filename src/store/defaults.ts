@@ -38,6 +38,7 @@ export const DEFAULT_STATE: StoreState = {
     hues: [25, 60, 120, 200, 260, 320],
     lightnessStops: [0.97, 0.9, 0.8, 0.68, 0.55, 0.42, 0.3, 0.2, 0.12],
     chroma: 0.15,
+    lockedHues: [],
   },
   gradient: {
     stops: [stop({ l: 0.2, c: 0.18, h: 280 }, 0), stop({ l: 0.85, c: 0.15, h: 30 }, 1)],

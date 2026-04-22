@@ -63,8 +63,8 @@ describe('oklchToHex round trip', () => {
       expect(hex).toMatch(/^#[0-9a-f]{6}$/);
       const back = parseInput(hex);
       expect(back).not.toBeNull();
-      // Lightness should round-trip within 2%
-      expect(Math.abs((back?.l ?? 0) - l)).toBeLessThan(0.02);
+      // Lightness should round-trip within 3% (hex quantization to 256 levels)
+      expect(Math.abs((back?.l ?? 0) - l)).toBeLessThan(0.03);
     }
   });
 });

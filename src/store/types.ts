@@ -37,6 +37,7 @@ export type MatrixConfig = {
   hues: number[]; // hue values for rows
   lightnessStops: number[]; // L values 0..1 for columns
   chroma: number; // base C, clamped per cell to stay in gamut
+  lockedHues: number[]; // indices into hues that randomize() skips
 };
 
 export type GradientStop = {

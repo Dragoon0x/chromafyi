@@ -7,7 +7,7 @@ import { useStore } from '@/store';
 import { nextId } from '@/store/defaults';
 import { Button } from '@/ui/Button';
 import { Slider } from '@/ui/Slider';
-import { Plus, Shuffle } from 'lucide-react';
+import { Lock, LockOpen, Plus, Shuffle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 export function Matrix() {
@@ -30,13 +30,27 @@ export function Matrix() {
   };
 
   const removeHue = (idx: number) => {
-    setMatrix({ hues: matrix.hues.filter((_, i) => i !== idx) });
+    setMatrix({
+      hues: matrix.hues.filter((_, i) => i !== idx),
+      lockedHues: matrix.lockedHues
+        .filter((i) => i !== idx)
+        .map((i) => (i > idx ? i - 1 : i)),
+    });
+  };
+
+  const toggleHueLock = (idx: number) => {
+    const set = new Set(matrix.lockedHues);
+    if (set.has(idx)) set.delete(idx);
+    else set.add(idx);
+    setMatrix({ lockedHues: Array.from(set).sort((a, b) => a - b) });
   };
 
   const randomize = () => {
     const n = matrix.hues.length;
     const start = Math.random() * 360;
-    const hues = Array.from({ length: n }, (_, i) => (start + (i * 360) / n) % 360);
+    const fresh = Array.from({ length: n }, (_, i) => (start + (i * 360) / n) % 360);
+    const locked = new Set(matrix.lockedHues);
+    const hues = matrix.hues.map((existing, i) => (locked.has(i) ? existing : (fresh[i] ?? existing)));
     setMatrix({ hues });
   };
 
@@ -141,12 +155,14 @@ export function Matrix() {
                 key={`hue-${rowIdx}`}
                 hue={h}
                 rowIdx={rowIdx}
+                locked={matrix.lockedHues.includes(rowIdx)}
                 cells={grid[rowIdx] ?? []}
                 onHueChange={(nextH) =>
                   setMatrix({
                     hues: matrix.hues.map((x, i) => (i === rowIdx ? nextH : x)),
                   })
                 }
+                onToggleLock={() => toggleHueLock(rowIdx)}
                 onRemove={() => removeHue(rowIdx)}
                 onCellClick={(c) => pickRecent(c)}
                 onCellHover={(col) => setHoveredCell({ row: rowIdx, col })}
@@ -170,8 +186,10 @@ export function Matrix() {
 function MatrixRow({
   hue,
   rowIdx,
+  locked,
   cells,
   onHueChange,
+  onToggleLock,
   onRemove,
   onCellClick,
   onCellHover,
@@ -180,8 +198,10 @@ function MatrixRow({
 }: {
   hue: number;
   rowIdx: number;
+  locked: boolean;
   cells: OKLCH[];
   onHueChange: (h: number) => void;
+  onToggleLock: () => void;
   onRemove: () => void;
   onCellClick: (c: OKLCH) => void;
   onCellHover: (col: number) => void;
@@ -191,6 +211,19 @@ function MatrixRow({
   return (
     <>
       <div className="p-1.5 border-l-0 border-t border-[color:var(--color-border)] flex items-center gap-1">
+        <button
+          type="button"
+          onClick={onToggleLock}
+          aria-label={locked ? 'Unlock hue row' : 'Lock hue row (skip on randomize)'}
+          title={locked ? 'Locked — randomize skips this row' : 'Lock to skip on randomize'}
+          className={`w-5 h-5 inline-flex items-center justify-center rounded-[var(--radius-xs)] transition-colors ${
+            locked
+              ? 'text-[color:var(--color-accent)] bg-[color:color-mix(in_oklab,var(--color-accent)_15%,transparent)]'
+              : 'text-[color:var(--color-text-dim)] hover:text-[color:var(--color-text)]'
+          }`}
+        >
+          {locked ? <Lock size={10} /> : <LockOpen size={10} />}
+        </button>
         <input
           aria-label={`Hue row ${rowIdx + 1}`}
           type="number"

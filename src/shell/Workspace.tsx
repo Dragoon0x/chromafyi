@@ -1,6 +1,7 @@
 import { Inspector } from '@/modules/inspector/Inspector';
 import { useStore } from '@/store';
 import { Suspense, lazy } from 'react';
+import { ErrorBoundary } from './ErrorBoundary';
 
 const Matrix = lazy(() => import('@/modules/matrix/Matrix').then((m) => ({ default: m.Matrix })));
 const PaletteBuilder = lazy(() =>
@@ -33,24 +34,26 @@ export function Workspace() {
   return (
     <main className="flex-1 min-w-0 relative">
       <div key={tab} className="h-full fade-in">
-        <Suspense
-          fallback={
-            <div className="h-full grid place-items-center text-xs text-[color:var(--color-text-dim)]">
-              loading…
-            </div>
-          }
-        >
-          {tab === 'inspector' && <Inspector />}
-          {tab === 'matrix' && <Matrix />}
-          {tab === 'palette' && <PaletteBuilder />}
-          {tab === 'gradient' && <GradientLab />}
-          {tab === 'contrast' && <ContrastChecker />}
-          {tab === 'gamut' && <GamutVisualizer />}
-          {tab === 'cvd' && <CVDSimulator />}
-          {tab === 'image' && <ImageExtract />}
-          {tab === 'bulk' && <BulkConverter />}
-          {tab === 'export' && <ExportStudio />}
-        </Suspense>
+        <ErrorBoundary moduleName={tab}>
+          <Suspense
+            fallback={
+              <div className="h-full grid place-items-center text-xs text-[color:var(--color-text-dim)]">
+                loading…
+              </div>
+            }
+          >
+            {tab === 'inspector' && <Inspector />}
+            {tab === 'matrix' && <Matrix />}
+            {tab === 'palette' && <PaletteBuilder />}
+            {tab === 'gradient' && <GradientLab />}
+            {tab === 'contrast' && <ContrastChecker />}
+            {tab === 'gamut' && <GamutVisualizer />}
+            {tab === 'cvd' && <CVDSimulator />}
+            {tab === 'image' && <ImageExtract />}
+            {tab === 'bulk' && <BulkConverter />}
+            {tab === 'export' && <ExportStudio />}
+          </Suspense>
+        </ErrorBoundary>
       </div>
     </main>
   );
